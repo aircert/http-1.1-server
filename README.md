@@ -5,8 +5,16 @@ Verodin Challenge Project
 
 Write a simple HTTP server from scratch in Ruby.  This should accept GET requests and respond with the static file at the requested path in a valid HTTP response.  The server will need to listen on a TCP socket and parse incoming requests in order to respond to them appropriately.
 
-Please email us with any questions you have about the project.
+Run
+-------
 
+`ruby server.rb`
+
+Test
+----
+
+Listens on port 2345
+`open localhost:2345`
 
 Scope
 -----
