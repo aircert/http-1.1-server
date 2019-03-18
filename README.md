@@ -13,8 +13,7 @@ Run
 Test
 ----
 
-Listens on port 2345
-`open localhost:2345`
+Listens on `localhost:2345`
 
 Scope
 -----
