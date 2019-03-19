@@ -48,6 +48,32 @@ def requested_file(request_line)
   File.join(WEB_ROOT, *clean)
 end
 
+
+
+# Determine if any other request type outside of GET
+def parse(request)
+  method, path, version = request.lines[0].split
+  {
+    path: path,
+    method: method,
+    headers: parse_headers(request)
+  }
+end
+
+def parse_headers(request)
+  headers = {}
+  request.lines[1..-1].each do |line|
+    return headers if line == "\r\n"
+    header, value = line.split
+    header        = normalize(header)
+    headers[header] = value
+  end
+
+  def normalize(header)
+    header.gsub(":", "").downcase.to_sym
+  end
+end
+
 # Except where noted below, the general approach of
 # handling requests and generating responses is
 # similar to that of the "Hello World" example
@@ -59,37 +85,51 @@ loop do
   Thread.start(server.accept) do |socket|
     request_line = socket.gets
 
-    STDERR.puts request_line
+    parse_response = parse(request_line)
 
-    path = requested_file(request_line)
-    path = File.join(path, 'index.html') if File.directory?(path)
-
-    # Make sure the file exists and is not a directory
-    # before attempting to open it.
-    if File.exist?(path) && !File.directory?(path)
-      File.open(path, "rb") do |file|
-        socket.print "HTTP/1.1 200 OK\r\n" +
-                     "Content-Type: #{content_type(file)}\r\n" +
-                     "Content-Length: #{file.size}\r\n" +
-                     "Connection: close\r\n"
-
-        socket.print "\r\n"
-
-        # write the contents of the file to the socket
-        IO.copy_stream(file, socket)
-      end
-    else
-      message = "File not found\n"
-
-      # respond with a 404 error code to indicate the file does not exist
-      socket.print "HTTP/1.1 404 Not Found\r\n" +
-                   "Content-Type: text/plain\r\n" +
-                   "Content-Length: #{message.size}\r\n" +
-                   "Connection: close\r\n"
+    if parse_response[:method] != "GET"
+      message = "Forbidden\n"
+      
+      socket.print "HTTP/1.1 400 Forbidden Request\r\n" +
+      "Content-Type: text/plain\r\n" +
+      "Content-Length: #{message.size}\r\n" +
+      "Connection: close\r\n"
 
       socket.print "\r\n"
 
       socket.print message
+    else
+
+      path = requested_file(request_line)
+      path = File.join(path, 'index.html') if File.directory?(path)
+
+      # Make sure the file exists and is not a directory
+      # before attempting to open it.
+      if File.exist?(path) && !File.directory?(path)
+        File.open(path, "rb") do |file|
+          socket.print "HTTP/1.1 200 OK\r\n" +
+          "Content-Type: #{content_type(file)}\r\n" +
+          "Content-Length: #{file.size}\r\n" +
+          "Connection: close\r\n"
+
+          socket.print "\r\n"
+
+          # write the contents of the file to the socket
+          IO.copy_stream(file, socket)
+        end
+      else
+        message = "File not found\n"
+
+        # respond with a 404 error code to indicate the file does not exist
+        socket.print "HTTP/1.1 404 Not Found\r\n" +
+        "Content-Type: text/plain\r\n" +
+        "Content-Length: #{message.size}\r\n" +
+        "Connection: close\r\n"
+
+        socket.print "\r\n"
+
+        socket.print message
+      end
     end
 
     socket.close
